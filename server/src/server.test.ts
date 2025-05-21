@@ -1,110 +1,175 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { SymbolKind } from "vscode-languageserver";
 import {
   initializeParser,
   parse,
-  findNodesOfType,
+  validateScrapScript,
+  getCompletionItems,
+  getHoverInfo,
   getDocumentSymbols,
 } from "./server";
+import {
+  CompletionItem,
+  Hover,
+  MarkupContent,
+} from "vscode-languageserver/node";
 
-describe("Parser", () => {
+describe("ScrapScript Language Server", () => {
+  const exampleCode = `
+()
+
+; xyz = x + y * z 
+; x = 10 
+; y = 20 
+; z = 30
+
+; double = x -> x * 2
+
+; is-zero = 
+    | 0 -> #true ()
+    | _ -> #false ()
+
+; person =
+    { name = "John"
+    , age = 30
+    , address =
+      { street = "123 Main St"
+      , city = "Anytown"
+      , country = "USA"
+      }
+    }
+
+; numbers = 
+    [1, 2, 3, 4, 5]
+    |> list/map (x -> x * 2)
+    |> list/map (x -> x + 1)
+
+; sum = list/fold 0 (+) numbers 
+
+; factorial =
+    | n ? n < 0 -> #error "negative input"
+    | 0 -> #ok 1
+    | n -> #ok (n * compute (n - 1))
+
+; compose = f -> g -> x -> f (g x)
+`;
+
+  let document: TextDocument;
+
   beforeAll(async () => {
     await initializeParser();
+    document = TextDocument.create(
+      "file:///example.ss",
+      "scrapscript",
+      1,
+      exampleCode
+    );
   });
 
-  test("should parse simple expressions", () => {
-    const result = parse("1 + 2");
-    expect(result).toBeDefined();
-    expect(result.rootNode).toBeDefined();
+  describe("Parser", () => {
+    it("should initialize parser successfully", async () => {
+      await expect(initializeParser()).resolves.not.toThrow();
+    });
 
-    // Find the binary expression node
-    const binaryNodes = findNodesOfType(result.rootNode, "binary");
-    expect(binaryNodes).toHaveLength(1);
-    const binaryNode = binaryNodes[0];
-
-    // Check the operator
-    const operatorNode = binaryNode.child(1);
-    expect(operatorNode?.text).toBe("+");
-
-    // Check the operands
-    const leftNode = binaryNode.child(0);
-    const rightNode = binaryNode.child(2);
-    expect(leftNode?.text).toBe("1");
-    expect(rightNode?.text).toBe("2");
+    it("should parse valid ScrapScript code", () => {
+      const tree = parse(exampleCode);
+      expect(tree.rootNode).toBeDefined();
+      expect(tree.rootNode.hasError).toBe(false);
+    });
   });
 
-  test("should parse function definitions", () => {
-    const result = parse("fn add(a, b) { a + b }");
-    expect(result).toBeDefined();
-    expect(result.rootNode).toBeDefined();
+  describe("Validation", () => {
+    it("should validate valid ScrapScript code", () => {
+      const diagnostics = validateScrapScript(exampleCode, 1000);
+      expect(diagnostics).toHaveLength(0);
+    });
 
-    // Find the function node
-    const funNodes = findNodesOfType(result.rootNode, "fun");
-    expect(funNodes).toHaveLength(1);
-    const funNode = funNodes[0];
-
-    // Check the function name
-    const idNode = funNode.child(0);
-    expect(idNode?.text).toBe("add");
-
-    // Check the parameters
-    const paramsNode = funNode.child(1);
-    expect(paramsNode?.text).toBe("(a, b)");
+    it("should detect syntax errors", () => {
+      const invalidCode = "; x = 10 + ;";
+      const diagnostics = validateScrapScript(invalidCode, 1000);
+      expect(diagnostics.length).toBeGreaterThan(0);
+      expect(diagnostics[0].severity).toBe(1); // Error severity
+    });
   });
 
-  test("should handle nested expressions", () => {
-    const result = parse("fn calculate(x) { (x + 1) * 2 }");
-    expect(result).toBeDefined();
-    expect(result.rootNode).toBeDefined();
+  describe("Completion", () => {
+    it("should provide operator completions", () => {
+      const position = { line: 1, character: 8 }; // After "xyz = x + y"
+      const completions = getCompletionItems(document, position);
+      expect(completions.some((c: CompletionItem) => c.label === "*")).toBe(
+        true
+      );
+      expect(completions.some((c: CompletionItem) => c.label === "/")).toBe(
+        true
+      );
+    });
 
-    // Find the function node
-    const funNodes = findNodesOfType(result.rootNode, "fun");
-    expect(funNodes).toHaveLength(1);
-
-    // Find the binary expressions
-    const binaryNodes = findNodesOfType(result.rootNode, "binary");
-    expect(binaryNodes.length).toBeGreaterThan(0);
+    it("should provide tag completions", () => {
+      const position = { line: 10, character: 12 }; // After "| 0 -> #"
+      const completions = getCompletionItems(document, position);
+      expect(completions.some((c: CompletionItem) => c.label === "true")).toBe(
+        true
+      );
+      expect(completions.some((c: CompletionItem) => c.label === "false")).toBe(
+        true
+      );
+    });
   });
 
-  test("should handle invalid syntax", () => {
-    expect(() => parse("1 +")).toThrow();
-    expect(() => parse("fn add(a,) {}")).toThrow();
-  });
-});
+  describe("Hover", () => {
+    it("should provide hover info for operators", () => {
+      const position = { line: 1, character: 8 }; // After "xyz = x + y"
+      const hover = getHoverInfo(document, position);
+      expect(hover).toBeDefined();
+      if (
+        hover &&
+        typeof hover.contents === "object" &&
+        "value" in hover.contents
+      ) {
+        expect(hover.contents.value).toContain("Operator");
+      }
+    });
 
-describe("Symbol Resolution", () => {
-  beforeAll(async () => {
-    await initializeParser();
-  });
-
-  function createDocument(content: string): TextDocument {
-    return TextDocument.create("file:///test.scrap", "scrapscript", 1, content);
-  }
-
-  test("should resolve local variables", () => {
-    const code = `x + 2 ; x = 1`;
-    const document = createDocument(code);
-    const symbols = getDocumentSymbols(document);
-    expect(symbols).toHaveLength(1);
-    expect(symbols[0].name).toBe("x");
-    expect(symbols[0].kind).toBe(SymbolKind.Variable);
-  });
-
-  test("should resolve function parameters", () => {
-    const code = `a -> b -> a + b`;
-    const document = createDocument(code);
-    const symbols = getDocumentSymbols(document);
-    expect(symbols).toHaveLength(1); // Only the function itself is a symbol
-    expect(symbols[0].name).toBe("add");
-    expect(symbols[0].kind).toBe(SymbolKind.Function);
+    it("should provide hover info for tags", () => {
+      const position = { line: 10, character: 12 }; // After "| 0 -> #"
+      const hover = getHoverInfo(document, position);
+      expect(hover).toBeDefined();
+      if (
+        hover &&
+        typeof hover.contents === "object" &&
+        "value" in hover.contents
+      ) {
+        expect(hover.contents.value).toContain("Tag");
+      }
+    });
   });
 
-  test("should detect undefined variables", () => {
-    const code = `x + 1`;
-    const document = createDocument(code);
-    const symbols = getDocumentSymbols(document);
-    expect(symbols).toHaveLength(1); // Only the function itself is a symbol
-    expect(symbols[0].name).toBe("test");
-    expect(symbols[0].kind).toBe(SymbolKind.Function);
+  describe("Document Symbols", () => {
+    it("should find all declarations", () => {
+      const symbols = getDocumentSymbols(document);
+      expect(symbols.length).toBeGreaterThan(0);
+
+      // Check for specific declarations
+      const symbolNames = symbols.map((s) => s.name);
+      expect(symbolNames).toContain("double");
+      expect(symbolNames).toContain("is-zero");
+      expect(symbolNames).toContain("person");
+      expect(symbolNames).toContain("numbers");
+      expect(symbolNames).toContain("sum");
+      expect(symbolNames).toContain("factorial");
+      expect(symbolNames).toContain("compose");
+    });
+
+    it("should correctly identify symbol kinds", () => {
+      const symbols = getDocumentSymbols(document);
+
+      const doubleSymbol = symbols.find((s) => s.name === "double");
+      expect(doubleSymbol?.kind).toBe(2); // Function kind
+
+      const personSymbol = symbols.find((s) => s.name === "person");
+      expect(personSymbol?.kind).toBe(5); // Object kind
+
+      const numbersSymbol = symbols.find((s) => s.name === "numbers");
+      expect(numbersSymbol?.kind).toBe(3); // Array kind
+    });
   });
 });
