@@ -1,3 +1,7 @@
+# WIP
+
+---
+
 # ScrapScript Language Server Protocol (LSP)
 
 A Language Server Protocol implementation for the ScrapScript programming language based on tree-sitter.
