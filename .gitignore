@@ -1,0 +1,40 @@
+# Dependency directories
+node_modules/
+
+# Compiled output
+out/
+*.js
+!syntaxes/*.js
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# VS Code specific files
+.vscode-test/
+*.vsix
+
+# Build files
+tree-sitter-*.wasm
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Cache
+.npm
+.eslintcache
+
+tsconfig.tsbuildinfo
+.aider*
+
+/tree-sitter-scrapscript

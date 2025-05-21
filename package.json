@@ -1,0 +1,59 @@
+{
+  "name": "scrapscript-lsp",
+  "displayName": "Scrapscript LSP",
+  "description": "Language Server for Scrapscript",
+  "version": "0.1.0",
+  "publisher": "scrapscript",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scrapscript/scrapscript-lsp"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [],
+  "main": "./client/out/extension",
+  "contributes": {
+    "languages": [
+      {
+        "id": "scrapscript",
+        "aliases": [
+          "Scrapscript",
+          "scrapscript"
+        ],
+        "extensions": [
+          ".scrap",
+          ".ss"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "scrapscript",
+        "scopeName": "source.scrapscript",
+        "path": "./syntaxes/scrapscript.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/parser": "^8.32.1",
+    "eslint": "^9.27.0",
+    "typescript": "^5.8.3"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ]
+}
