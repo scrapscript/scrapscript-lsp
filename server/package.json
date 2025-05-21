@@ -14,6 +14,7 @@
   },
   "scripts": {
     "build-wasm": "tree-sitter build --wasm ../tree-sitter-scrapscript",
+    "build": "tree-sitter build ../tree-sitter-scrapscript",
     "compile": "tsc -b",
     "watch": "tsc -b -w",
     "test": "jest",

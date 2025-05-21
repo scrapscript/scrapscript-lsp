@@ -55,5 +55,9 @@
   "workspaces": [
     "client",
     "server"
-  ]
+  ],
+  "dependencies": {
+    "tree-sitter": "^0.22.4",
+    "tree-sitter-cli": "^0.22.4"
+  }
 }
