@@ -1,4 +1,5 @@
 {
+  "title": "scrapscript",
   "comments": {
     "lineComment": "--"
   },
@@ -22,5 +23,23 @@
   "indentationRules": {
     "increaseIndentPattern": "({[\\s]*|\\([\\s]*)$",
     "decreaseIndentPattern": "^[\\s]*[)}]"
+  },
+  "properties": {
+    "scrapscript.maxNumberOfProblems": {
+      "type": "number",
+      "default": 1000,
+      "description": "Maximum number of problems to report"
+    },
+    "scrapscript.enableEnhancedFeatures": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable enhanced language features"
+    },
+    "scrapscript.enableTypeChecking": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable type checking"
+    }
   }
 }
+
