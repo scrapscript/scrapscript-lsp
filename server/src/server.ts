@@ -37,7 +37,7 @@ import {
 
 import { TextDocument } from "vscode-languageserver-textdocument";
 import Parser from "tree-sitter";
-import * as Language from "../../tree-sitter-scrapscript/bindings/node";
+import * as Language from "tree-sitter-scrapscript/bindings/node";
 
 // ===== Enhanced Types and Constants =====
 export type SyntaxNode = Parser.SyntaxNode;
