@@ -304,6 +304,13 @@ function limitDiagnostics(
   return diagnostics.slice(0, maxNumberOfProblems);
 }
 
+function validateNodeBy(
+  node: SyntaxNode,
+  callback: (node: SyntaxNode) => Diagnostic[]
+): Diagnostic[] {
+  return walkTreeFlatMapping(node, callback);
+}
+
 // ===== Enhanced Validation =====
 export function validateScrapScript(
   text: string,
