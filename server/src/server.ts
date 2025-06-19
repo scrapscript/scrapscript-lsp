@@ -316,41 +316,40 @@ export function validateScrapScript(
   text: string,
   maxNumberOfProblems: number,
 ): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
-
+  let tree: Tree;
   try {
-    const tree = parse(text);
-    const rootNode = tree.rootNode;
-
-    // Enhanced error detection
-    if (rootNode.hasError) {
-      const errorNodes = findErrorNodes(rootNode);
-
-      for (const errorNode of errorNodes) {
-        const range = nodeToRange(errorNode);
-        const diagnostic = createDiagnosticForError(errorNode, range);
-        diagnostics.push(diagnostic);
-      }
-    }
-
-    // Additional validations
-    validatePatternMatching(rootNode, diagnostics);
-    validateTypeConsistency(rootNode, diagnostics, text);
-    validateWhereClauseStructure(rootNode, diagnostics);
-    validateRecordSyntax(rootNode, diagnostics);
-    validateListSyntax(rootNode, diagnostics);
-    validateFunctionSyntax(rootNode, diagnostics);
+    tree = parse(text);
   } catch (err) {
     console.error("Error parsing ScrapScript:", err);
-    diagnostics.push({
+    return limitDiagnostics([{
       severity: DiagnosticSeverity.Error,
       range: Range.create(0, 0, 0, 0),
       message: `Failed to parse ScrapScript: ${err}`,
       source: "scrapscript",
-    });
+    }], maxNumberOfProblems);
   }
 
-  return diagnostics.slice(0, maxNumberOfProblems);
+  const rootNode: SyntaxNode = tree.rootNode;
+
+  // Enhanced error detection
+  const errors: Diagnostic[] = rootNode.hasError ?
+    findErrorNodes(rootNode).map(errorNode => {
+      const range = nodeToRange(errorNode);
+      return createDiagnosticForError(errorNode, range);
+    }) : [];
+
+  // Additional validations
+  const validations: Diagnostic[] = [
+    validatePatternMatching(rootNode),
+    validateTypeConsistency(rootNode, text),
+    validateWhereClauseStructure(rootNode),
+    validateRecordSyntax(rootNode),
+    validateListSyntax(rootNode),
+    validateFunctionSyntax(rootNode)
+  ].flat();
+
+  const diagnostics: Diagnostic[] = errors.concat(validations);
+  return limitDiagnostics(diagnostics, maxNumberOfProblems);
 }
 
 function findErrorNodes(node: SyntaxNode): SyntaxNode[] {
@@ -419,11 +418,9 @@ function createDiagnosticForError(
   };
 }
 
-function validatePatternMatching(
-  node: SyntaxNode,
-  diagnostics: Diagnostic[],
-): void {
-  walkTree(node, (currentNode) => {
+function validatePatternMatching(node: SyntaxNode): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    const diagnostics: Diagnostic[] = [];
     if (
       currentNode.type === "match_fun" ||
       currentNode.type === "pattern_match"
@@ -459,15 +456,16 @@ function validatePatternMatching(
         });
       }
     }
+    return diagnostics;
   });
 }
 
 function validateTypeConsistency(
   node: SyntaxNode,
-  diagnostics: Diagnostic[],
   text: string,
-): void {
-  walkTree(node, (currentNode) => {
+): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    const diagnostics: Diagnostic[] = [];
     if (currentNode.type === "list") {
       const elementTypes = new Set<string>();
 
@@ -490,6 +488,7 @@ function validateTypeConsistency(
         });
       }
     }
+    return diagnostics;
   });
 }
 
@@ -517,11 +516,9 @@ function inferBasicType(node: SyntaxNode): string | null {
   }
 }
 
-function validateWhereClauseStructure(
-  node: SyntaxNode,
-  diagnostics: Diagnostic[],
-): void {
-  walkTree(node, (currentNode) => {
+function validateWhereClauseStructure(node: SyntaxNode): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    let diagnostics: Diagnostic[] = [];
     if (currentNode.type === "where") {
       // Check for proper "; identifier = expression" structure
       let hasProperStructure = false;
@@ -548,14 +545,13 @@ function validateWhereClauseStructure(
         });
       }
     }
+    return diagnostics;
   });
 }
 
-function validateRecordSyntax(
-  node: SyntaxNode,
-  diagnostics: Diagnostic[],
-): void {
-  walkTree(node, (currentNode) => {
+function validateRecordSyntax(node: SyntaxNode): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    const diagnostics: Diagnostic[] = [];
     if (currentNode.type === "record") {
       // Validate record field syntax
       for (let i = 0; i < currentNode.namedChildCount; i++) {
@@ -574,11 +570,13 @@ function validateRecordSyntax(
         }
       }
     }
+    return diagnostics;
   });
 }
 
-function validateListSyntax(node: SyntaxNode, diagnostics: Diagnostic[]): void {
-  walkTree(node, (currentNode) => {
+function validateListSyntax(node: SyntaxNode): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    const diagnostics: Diagnostic[] = [];
     if (currentNode.type === "list") {
       // Check for trailing commas and proper separators
       const text = currentNode.text;
@@ -592,14 +590,13 @@ function validateListSyntax(node: SyntaxNode, diagnostics: Diagnostic[]): void {
         });
       }
     }
+    return diagnostics;
   });
 }
 
-function validateFunctionSyntax(
-  node: SyntaxNode,
-  diagnostics: Diagnostic[],
-): void {
-  walkTree(node, (currentNode) => {
+function validateFunctionSyntax(node: SyntaxNode): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    const diagnostics: Diagnostic[] = [];
     if (currentNode.type === "fun") {
       // Check for proper arrow function syntax
       const hasArrow = currentNode.text.includes("->");
@@ -613,6 +610,7 @@ function validateFunctionSyntax(
         });
       }
     }
+    return diagnostics;
   });
 }
 
