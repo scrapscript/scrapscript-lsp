@@ -271,6 +271,13 @@ function walkTree(
   }
 }
 
+function limitDiagnostics(
+  diagnostics: Diagnostic[],
+  maxNumberOfProblems: number
+): Diagnostic[] {
+  return diagnostics.slice(0, maxNumberOfProblems);
+}
+
 // ===== Enhanced Validation =====
 export function validateScrapScript(
   text: string,
