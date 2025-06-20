@@ -520,34 +520,32 @@ function inferBasicType(node: SyntaxNode): string | null {
 
 function validateWhereClauseStructure(node: SyntaxNode): Diagnostic[] {
   return validateNodeBy(node, (currentNode) => {
-    let diagnostics: Diagnostic[] = [];
-    if (currentNode.type === "where") {
-      // Check for proper "; identifier = expression" structure
-      let hasProperStructure = false;
+    // Lazily compute diagnostics
+    const getDiagnostics = () => {
+      return [{
+        severity: DiagnosticSeverity.Error,
+        range: nodeToRange(currentNode),
+        message: 'Invalid where clause.\n'
+          + 'Expected:\n'
+          + '\t"; pattern = expression"\n'
+          + '\tor\n'
+          + '\t"; id = data_type"',
+        source: "scrapscript",
+      }];
+    };
 
-      for (let i = 0; i < currentNode.childCount; i++) {
-        const child = currentNode.child(i);
-        if (child?.type === ";" && i + 2 < currentNode.childCount) {
-          const nextChild = currentNode.child(i + 1);
-          const followingChild = currentNode.child(i + 2);
-
-          if (nextChild?.type === "id" && followingChild?.type === "=") {
-            hasProperStructure = true;
-            break;
-          }
-        }
-      }
-
-      if (!hasProperStructure) {
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: nodeToRange(currentNode),
-          message: 'Invalid where clause. Expected "; identifier = expression"',
-          source: "scrapscript",
-        });
-      }
-    }
-    return diagnostics;
+    if (currentNode.type !== "where") return [];
+    // Node should have form "id; ((id = data_type)|(pattern = expression))"
+    if (currentNode.childCount !== 3) return getDiagnostics();
+    // Expect semicolon in middle
+    const semicolonPosition = 1;
+    if (currentNode.child(semicolonPosition)?.type !== ";") return getDiagnostics();
+    // Expect declaration or type declaration at the end
+    const declarationPosition = 2;
+    if (currentNode.child(declarationPosition)?.type !== "declaration" &&
+      currentNode.child(declarationPosition)?.type !== "type_declaration")
+      return getDiagnostics();
+    return [];
   });
 }
 
