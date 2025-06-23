@@ -691,6 +691,7 @@ function analyzeCompletionContext(
     return { type: "pattern_match" };
   }
 
+  // [TODO]: Just make the conditional a conjunction?
   // Check for where clause context
   if (lineText.trim().startsWith(";") || findParentOfType(node, "where")) {
     return { type: "where_clause" };
