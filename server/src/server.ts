@@ -772,8 +772,6 @@ function getWhereClauseCompletions(): CompletionItem[] {
 }
 
 function getPatternMatchCompletions(): CompletionItem[] {
-  const completions: CompletionItem[] = [];
-
   const patterns = [
     { label: "basic pattern", insertText: "| ${1:pattern} -> ${2:expression}" },
     { label: "catch-all", insertText: "| _ -> ${1:default}" },
@@ -802,8 +800,8 @@ function getPatternMatchCompletions(): CompletionItem[] {
     { label: "text pattern", insertText: '| "${1:text}" -> ${2:expression}' },
   ];
 
-  patterns.forEach((pattern, index) => {
-    completions.push({
+  return patterns.map((pattern, index) => {
+    return {
       label: pattern.label,
       kind: CompletionItemKind.Snippet,
       detail: "Pattern match case",
@@ -811,10 +809,8 @@ function getPatternMatchCompletions(): CompletionItem[] {
       insertText: pattern.insertText,
       insertTextFormat: InsertTextFormat.Snippet,
       sortText: `0${index.toString().padStart(2, "0")}`,
-    });
+    }
   });
-
-  return completions;
 }
 
 function getRecordFieldCompletions(recordType?: string): CompletionItem[] {
