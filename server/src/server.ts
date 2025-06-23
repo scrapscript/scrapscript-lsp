@@ -683,17 +683,17 @@ function analyzeCompletionContext(
     return { type: "tag" };
   }
 
-  // Check for where clause context
-  if (lineText.trim().startsWith(";") || findParentOfType(node, "where")) {
-    return { type: "where_clause" };
-  }
-
   // Check for pattern match context
   if (
     lineText.trim().startsWith("|") ||
-    findParentOfType(node, "pattern_match")
+    findParentOfType(node, "match_fun")
   ) {
     return { type: "pattern_match" };
+  }
+
+  // Check for where clause context
+  if (lineText.trim().startsWith(";") || findParentOfType(node, "where")) {
+    return { type: "where_clause" };
   }
 
   // Check for record field access

@@ -13,6 +13,7 @@ import {
 } from "./server";
 import {
   CompletionItem,
+  CompletionItemKind,
   Hover,
   MarkupContent,
   Range,
@@ -199,7 +200,7 @@ result
       const completions = getCompletionItems(document, position);
 
       const patternCompletions = completions.filter(
-        (c) => c.kind === 14 && c.label.includes("->"), // Snippet kind
+        (c) => c.kind === CompletionItemKind.Snippet && c.insertText?.includes("->"), // Snippet kind
       );
       expect(patternCompletions.length).toBeGreaterThan(0);
     });
