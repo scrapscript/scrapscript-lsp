@@ -757,18 +757,14 @@ function getTagCompletions(): CompletionItem[] {
 }
 
 function getWhereClauseCompletions(): CompletionItem[] {
-  const completions: CompletionItem[] = [];
-
-  completions.push({
+  return [{
     label: ". identifier = expression",
     kind: CompletionItemKind.Snippet,
     detail: "Where clause",
     documentation: "Define a variable in a where clause",
     insertText: ". ${1:identifier} = ${2:expression}",
     insertTextFormat: InsertTextFormat.Snippet,
-  });
-
-  return [...completions, ...getGlobalCompletions()];
+  }, ...getGlobalCompletions()];
 }
 
 function getPatternMatchCompletions(): CompletionItem[] {
