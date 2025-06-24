@@ -884,10 +884,8 @@ function getTypeCompletions(): CompletionItem[] {
 }
 
 function getPipelineCompletions(): CompletionItem[] {
-  const completions: CompletionItem[] = [];
-
-  // Add common pipeline operators
-  completions.push(
+  return [
+    // Add common pipeline operators
     {
       label: "|>",
       kind: CompletionItemKind.Operator,
@@ -908,9 +906,8 @@ function getPipelineCompletions(): CompletionItem[] {
       detail: "Function composition",
       documentation: "Compose functions (left to right)",
     },
-  );
-
-  return [...completions, ...getFunctionCompletions()];
+    ...getFunctionCompletions()
+  ];
 }
 
 function getImportCompletions(): CompletionItem[] {
