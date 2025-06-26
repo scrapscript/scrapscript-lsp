@@ -59,5 +59,6 @@
   "dependencies": {
     "tree-sitter": "^0.21.1",
     "tree-sitter-cli": "^0.24.4",
+    "tree-sitter-scrapscript": "github:scrapscript/tree-sitter-scrapscript"
   }
 }
