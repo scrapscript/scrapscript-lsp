@@ -71,7 +71,7 @@ result
 
 ; greeting = "Hello, " ++ person.name ++ "!"
 
-; encoded-data = ;;aGVsbG8gd29ybGQ=
+; encoded-data = ~~aGVsbG8gd29ybGQ=
 
 ; process-response =
     | #ok { status = 200, data = content } -> #success content
