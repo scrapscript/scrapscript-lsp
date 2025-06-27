@@ -20,8 +20,6 @@ import {
 
 describe("Enhanced ScrapScript Language Server", () => {
   const enhancedExampleCode = `
-()
-
 result
 ; result = x + y * z 
 ; x = 10 
