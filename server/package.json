@@ -17,7 +17,7 @@
     "build": "tree-sitter build ../tree-sitter-scrapscript",
     "compile": "tsc -b",
     "watch": "tsc -b -w",
-    "test": "jest",
+    "test": "jest out",
     "test:watch": "jest --watch"
   },
   "devDependencies": {
