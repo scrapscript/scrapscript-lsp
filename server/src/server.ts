@@ -1347,26 +1347,23 @@ export function findReferences(
   if (!node || node.type !== "id") return [];
 
   const identifier = getNodeText(document, node);
-  const references: Location[] = [];
 
   // [TODO]: Exclude false positives, i.e. occurrences
   // of the name that are bound by different lambdas
   // using the same identifier for their parameter
 
   // Find all occurrences of this identifier
-  walkTree(tree.rootNode, (currentNode) => {
+  return walkTreeFlatMapping(tree.rootNode, (currentNode) => {
     if (
       currentNode.type === "id" &&
       getNodeText(document, currentNode) === identifier
     ) {
-      references.push({
+      return [{
         uri: document.uri,
         range: nodeToRange(currentNode),
-      });
-    }
+      }];
+    } else return [];
   });
-
-  return references;
 }
 
 export function prepareRename(
