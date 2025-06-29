@@ -1349,6 +1349,10 @@ export function findReferences(
   const identifier = getNodeText(document, node);
   const references: Location[] = [];
 
+  // [TODO]: Exclude false positives, i.e. occurrences
+  // of the name that are bound by different lambdas
+  // using the same identifier for their parameter
+
   // Find all occurrences of this identifier
   walkTree(tree.rootNode, (currentNode) => {
     if (
