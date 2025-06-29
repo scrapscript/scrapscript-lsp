@@ -290,6 +290,13 @@ function walkTreeCollecting<R>(
   return results;
 }
 
+function walkTreeFlatMapping<R>(
+  node: SyntaxNode,
+  callback: (node: SyntaxNode) => R[],
+): R[] {
+  return walkTreeCollecting(node, callback).flat();
+}
+
 function limitDiagnostics(
   diagnostics: Diagnostic[],
   maxNumberOfProblems: number
