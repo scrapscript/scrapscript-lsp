@@ -1206,13 +1206,9 @@ export function getDocumentSymbols(document: TextDocument): DocumentSymbol[] {
 }
 
 function findNodesOfType(rootNode: SyntaxNode, type: string): SyntaxNode[] {
-  const nodes: SyntaxNode[] = [];
-  walkTree(rootNode, (node) => {
-    if (node.type === type) {
-      nodes.push(node);
-    }
+  return walkTreeFlatMapping(rootNode, (node) => {
+    return (node.type === type) ? [node] : [];
   });
-  return nodes;
 }
 
 function findWhereClauseDeclarations(rootNode: SyntaxNode): SyntaxNode[] {
