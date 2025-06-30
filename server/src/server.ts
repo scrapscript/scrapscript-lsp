@@ -316,6 +316,8 @@ export function validateScrapScript(
   text: string,
   maxNumberOfProblems: number,
 ): Diagnostic[] {
+  if (text === "") return [];
+
   let tree: Tree;
   try {
     tree = parse(text);
