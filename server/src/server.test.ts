@@ -228,7 +228,7 @@ result
 
   describe("Enhanced Hover", () => {
     it("should provide enhanced hover for built-in functions", () => {
-      const position = { line: 25, character: 10 }; // Over "list/map"
+      const position = { line: 27, character: 7 }; // Over "list/map"
       const hover = getHoverInfo(document, position);
 
       expect(hover).toBeDefined();
@@ -242,7 +242,7 @@ result
     });
 
     it("should provide hover for tags with enhanced info", () => {
-      const position = { line: 8, character: 12 }; // Over "#zero"
+      const position = { line: 10, character: 11 }; // Over "#zero"
       const hover = getHoverInfo(document, position);
 
       expect(hover).toBeDefined();
@@ -256,7 +256,7 @@ result
     });
 
     it("should provide hover for operators with documentation", () => {
-      const position = { line: 25, character: 4 }; // Over "|>"
+      const position = { line: 27, character: 4 }; // Over "|>"
       const hover = getHoverInfo(document, position);
 
       expect(hover).toBeDefined();
@@ -270,7 +270,7 @@ result
     });
 
     it("should provide hover for numbers with additional info", () => {
-      const position = { line: 4, character: 8 }; // Over "10"
+      const position = { line: 3, character: 6 }; // Over "10"
       const hover = getHoverInfo(document, position);
 
       expect(hover).toBeDefined();
@@ -326,14 +326,14 @@ result
 
   describe("References and Rename", () => {
     it("should find references to identifiers", () => {
-      const position = { line: 4, character: 15 }; // Over "x" in declaration
+      const position = { line: 3, character: 2 }; // Over "x" in declaration
       const references = findReferences(document, position);
 
       expect(references.length).toBeGreaterThan(1); // Should find definition and usage
     });
 
     it("should prepare rename for valid identifiers", () => {
-      const position = { line: 4, character: 15 }; // Over "x"
+      const position = { line: 2, character: 11 }; // Over "x"
       const renameInfo = prepareRename(document, position);
 
       expect(renameInfo).toBeDefined();
@@ -341,7 +341,7 @@ result
     });
 
     it("should execute rename correctly", () => {
-      const position = { line: 4, character: 15 }; // Over "x"
+      const position = { line: 2, character: 11 }; // Over "x"
       const renameResult = executeRename(document, position, "newX");
 
       expect(renameResult).toBeDefined();
