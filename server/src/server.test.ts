@@ -317,7 +317,7 @@ result
       const symbols = getDocumentSymbols(document);
 
       const functionSymbol = symbols.find((s) => s.name === "classify-number");
-      expect(functionSymbol?.detail).toContain("Function");
+      expect(functionSymbol?.detail).toContain("Pattern matching function");
 
       const recordSymbol = symbols.find((s) => s.name === "person");
       expect(recordSymbol?.detail).toContain("Record");
