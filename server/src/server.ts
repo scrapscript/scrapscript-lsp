@@ -1225,8 +1225,12 @@ function createDocumentSymbol(
   node: SyntaxNode,
   document: TextDocument,
 ): DocumentSymbol {
-  const patternNode = node.child(0);
-  if (!patternNode) {
+  let bindingNode: SyntaxNode | null | undefined = node.child(0);
+
+  // For normal declarations, the id is nested inside a pattern
+  if (node.type === "declaration") bindingNode = bindingNode?.child(0);
+
+  if (!bindingNode) {
     return {
       name: "unknown",
       kind: SymbolKind.Variable,
@@ -1237,7 +1241,7 @@ function createDocumentSymbol(
     };
   }
 
-  const name = getSymbolName(patternNode, document);
+  const name = getSymbolName(bindingNode, document);
   const exprNode = node.namedChild(node.namedChildCount - 1);
   const kind = getSymbolKind(exprNode);
   const detail = getSymbolDetail(node, exprNode);
@@ -1246,7 +1250,7 @@ function createDocumentSymbol(
     name,
     kind,
     range: nodeToRange(node),
-    selectionRange: nodeToRange(patternNode),
+    selectionRange: nodeToRange(bindingNode),
     detail,
     children: [],
   };
