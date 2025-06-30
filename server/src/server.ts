@@ -1192,7 +1192,7 @@ export function getDocumentSymbols(document: TextDocument): DocumentSymbol[] {
     ...declarations,
     ...whereClausesDeclarations,
     ...typeDeclarations,
-  ].map((node) => createDocumentSymbol(node, document));
+  ].map((node) => extractDocumentSymbolFromDeclaration(node, document));
 }
 
 function findNodesOfType(rootNode: SyntaxNode, type: string): SyntaxNode[] {
@@ -1221,7 +1221,7 @@ function findWhereClauseDeclarations(rootNode: SyntaxNode): SyntaxNode[] {
   return declarations;
 }
 
-function createDocumentSymbol(
+function extractDocumentSymbolFromDeclaration(
   node: SyntaxNode,
   document: TextDocument,
 ): DocumentSymbol {
