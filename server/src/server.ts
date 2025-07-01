@@ -271,6 +271,25 @@ function walkTree(
   }
 }
 
+function walkTreeCollecting<R>(
+  node: SyntaxNode,
+  callback: (node: SyntaxNode) => R,
+): R[] {
+  const results: R[] = [];
+  const stack: SyntaxNode[] = [node];
+  while (stack.length > 0) {
+    const node: SyntaxNode = stack.pop() as SyntaxNode;
+    results.push(callback(node));
+    for (let i = node.namedChildCount - 1; i >= 0; i--) {
+      const child = node.namedChild(i);
+      if (child) {
+        stack.push(child);
+      }
+    }
+  }
+  return results;
+}
+
 function limitDiagnostics(
   diagnostics: Diagnostic[],
   maxNumberOfProblems: number
