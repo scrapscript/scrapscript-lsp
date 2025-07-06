@@ -1532,7 +1532,7 @@ function analyzeSemanticTokens(
   walkTree(node, (currentNode) => {
     // Map ScrapScript syntax to semantic token types
     switch (currentNode.type) {
-      case "id":
+      case "id": {
         const text = getNodeText(document, currentNode);
         let tokenType = 6; // variable
         if (BUILT_IN_FUNCTIONS.includes(text)) {
@@ -1548,7 +1548,8 @@ function analyzeSemanticTokens(
           0,
         );
         break;
-      case "op":
+      }
+      case "op": {
         builder.push(
           currentNode.startPosition.row,
           currentNode.startPosition.column,
@@ -1557,7 +1558,8 @@ function analyzeSemanticTokens(
           0,
         );
         break;
-      case "tag":
+      }
+      case "tag": {
         builder.push(
           currentNode.startPosition.row,
           currentNode.startPosition.column,
@@ -1566,7 +1568,8 @@ function analyzeSemanticTokens(
           0,
         );
         break;
-      case "number":
+      }
+      case "number": {
         builder.push(
           currentNode.startPosition.row,
           currentNode.startPosition.column,
@@ -1575,7 +1578,8 @@ function analyzeSemanticTokens(
           0,
         );
         break;
-      case "text":
+      }
+      case "text": {
         builder.push(
           currentNode.startPosition.row,
           currentNode.startPosition.column,
@@ -1584,6 +1588,7 @@ function analyzeSemanticTokens(
           0,
         );
         break;
+      }
     }
   });
 }
