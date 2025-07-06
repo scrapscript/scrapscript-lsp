@@ -43,6 +43,7 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -b",
+    "lint": "eslint",
     "watch": "tsc -b -w"
   },
   "devDependencies": {
