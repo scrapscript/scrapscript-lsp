@@ -460,6 +460,7 @@ function validatePatternMatching(node: SyntaxNode): Diagnostic[] {
   });
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 function validateTypeConsistency(
   node: SyntaxNode,
   text: string,
@@ -491,6 +492,7 @@ function validateTypeConsistency(
     return diagnostics;
   });
 }
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 function inferBasicType(node: SyntaxNode): string | null {
   switch (node.type) {
@@ -808,6 +810,7 @@ function getPatternMatchCompletions(): CompletionItem[] {
   });
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 function getRecordFieldCompletions(recordType?: string): CompletionItem[] {
   // In a real implementation, this would analyze the record type
   const commonFields = [
@@ -828,10 +831,13 @@ function getRecordFieldCompletions(recordType?: string): CompletionItem[] {
     documentation: `Access field: ${field}`,
   }));
 }
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 function getFunctionCompletions(): CompletionItem[] {
   return BUILT_IN_FUNCTIONS.map((func) => {
+    /* eslint-disable @typescript-eslint/no-unused-vars */
     const [module, name] = func.split("/");
+    /* eslint-enable @typescript-eslint/no-unused-vars */
     return {
       label: func,
       kind: CompletionItemKind.Function,
@@ -1603,7 +1609,9 @@ export function setupServer() {
 
   let hasConfigurationCapability = false;
   let hasWorkspaceFolderCapability = false;
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   let hasDiagnosticRelatedInformationCapability = false;
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   connection.onInitialize(async (params: InitializeParams) => {
     const capabilities = params.capabilities;
@@ -1673,9 +1681,11 @@ export function setupServer() {
       );
     }
     if (hasWorkspaceFolderCapability) {
+      /* eslint-disable @typescript-eslint/no-unused-vars */
       connection.workspace.onDidChangeWorkspaceFolders((_event) => {
         connection.console.log("Workspace folder change event received.");
       });
+      /* eslint-enable @typescript-eslint/no-unused-vars */
     }
   });
 

@@ -734,6 +734,7 @@ describe("Helper Functions", () => {
   });
 
   it("should correctly identify built-in functions", () => {
+    /* eslint-disable @typescript-eslint/no-unused-vars */
     const builtIns = [
       "list/map",
       "list/filter",
@@ -741,6 +742,7 @@ describe("Helper Functions", () => {
       "result/bind",
     ];
     const nonBuiltIns = ["custom/function", "user/defined", "random/name"];
+    /* eslint-enable @typescript-eslint/no-unused-vars */
 
     // This test would require access to the isBuiltInFunction helper
     // In a real implementation, you'd export it or test it indirectly
