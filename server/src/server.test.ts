@@ -12,10 +12,7 @@ import {
   getCodeActions,
 } from "./server";
 import {
-  CompletionItem,
   CompletionItemKind,
-  Hover,
-  MarkupContent,
   Range,
 } from "vscode-languageserver/node";
 
