@@ -13,7 +13,6 @@ import {
   InitializeResult,
   HoverParams,
   Hover,
-  MarkupContent,
   MarkupKind,
   DocumentSymbol,
   SymbolKind,
@@ -31,7 +30,6 @@ import {
   CodeActionParams,
   CodeAction,
   CodeActionKind,
-  TextEdit,
   InsertTextFormat,
 } from "vscode-languageserver/node";
 
