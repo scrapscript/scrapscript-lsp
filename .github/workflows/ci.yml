@@ -31,7 +31,7 @@ jobs:
 
       - name: Lint
         run: npm run lint
-        if: ${{ false }} # Disable linting for now
+        if: ${{ ! startsWith(matrix.node-version, '16.') }}
 
       - name: Test
         run: npm test
