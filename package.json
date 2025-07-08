@@ -22,8 +22,9 @@
       {
         "id": "scrapscript",
         "aliases": [
-          "Scrapscript",
-          "scrapscript"
+            "ScrapScript",
+            "Scrapscript",
+            "scrapscript"
         ],
         "extensions": [
           ".scrapscript",
