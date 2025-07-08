@@ -22,17 +22,17 @@
       "title": "ScrapScript",
       "type": "object",
       "properties": {
-        "scrapScript.maxNumberOfProblems": {
+        "scrapScriptServer.maxNumberOfProblems": {
           "type": "number",
           "default": 1000,
           "description": "Maximum number of problems to report"
         },
-        "scrapScript.enableEnhancedFeatures": {
+        "scrapScriptServer.enableEnhancedFeatures": {
           "type": "boolean",
           "default": true,
           "description": "Enable enhanced language features"
         },
-        "scrapScript.enableTypeChecking": {
+        "scrapScriptServer.enableTypeChecking": {
           "type": "boolean",
           "default": true,
           "description": "Enable type checking"
