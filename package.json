@@ -18,6 +18,27 @@
   "activationEvents": [],
   "main": "./client/out/extension",
   "contributes": {
+    "configuration": {
+      "title": "ScrapScript",
+      "type": "object",
+      "properties": {
+        "scrapScript.maxNumberOfProblems": {
+          "type": "number",
+          "default": 1000,
+          "description": "Maximum number of problems to report"
+        },
+        "scrapScript.enableEnhancedFeatures": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable enhanced language features"
+        },
+        "scrapScript.enableTypeChecking": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable type checking"
+        }
+      }      
+    },
     "languages": [
       {
         "id": "scrapscript",
