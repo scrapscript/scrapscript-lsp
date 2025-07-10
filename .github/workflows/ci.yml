@@ -31,11 +31,10 @@ jobs:
 
       - name: Lint
         run: npm run lint
-        if: ${{ false }} # Disable linting for now
+        if: ${{ ! startsWith(matrix.node-version, '16.') }}
 
       - name: Test
-        run: npm test
-        if: ${{ false }} # Disable testing for now
+        run: npm run --workspace server test
 
   package:
     runs-on: ubuntu-latest

@@ -13,7 +13,6 @@ import {
   InitializeResult,
   HoverParams,
   Hover,
-  MarkupContent,
   MarkupKind,
   DocumentSymbol,
   SymbolKind,
@@ -31,13 +30,12 @@ import {
   CodeActionParams,
   CodeAction,
   CodeActionKind,
-  TextEdit,
   InsertTextFormat,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
 import Parser from "tree-sitter";
-import * as Language from "../../tree-sitter-scrapscript/bindings/node";
+import * as Language from "tree-sitter-scrapscript/bindings/node";
 
 // ===== Enhanced Types and Constants =====
 export type SyntaxNode = Parser.SyntaxNode;
@@ -271,46 +269,87 @@ function walkTree(
   }
 }
 
+function walkTreeCollecting<R>(
+  node: SyntaxNode,
+  callback: (node: SyntaxNode) => R,
+): R[] {
+  const results: R[] = [];
+  const stack: SyntaxNode[] = [node];
+  while (stack.length > 0) {
+    const node: SyntaxNode = stack.pop() as SyntaxNode;
+    results.push(callback(node));
+    for (let i = node.namedChildCount - 1; i >= 0; i--) {
+      const child = node.namedChild(i);
+      if (child) {
+        stack.push(child);
+      }
+    }
+  }
+  return results;
+}
+
+function walkTreeFlatMapping<R>(
+  node: SyntaxNode,
+  callback: (node: SyntaxNode) => R[],
+): R[] {
+  return walkTreeCollecting(node, callback).flat();
+}
+
+function limitDiagnostics(
+  diagnostics: Diagnostic[],
+  maxNumberOfProblems: number
+): Diagnostic[] {
+  return diagnostics.slice(0, maxNumberOfProblems);
+}
+
+function validateNodeBy(
+  node: SyntaxNode,
+  callback: (node: SyntaxNode) => Diagnostic[]
+): Diagnostic[] {
+  return walkTreeFlatMapping(node, callback);
+}
+
 // ===== Enhanced Validation =====
 export function validateScrapScript(
   text: string,
   maxNumberOfProblems: number,
 ): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
+  if (text === "") return [];
 
+  let tree: Tree;
   try {
-    const tree = parse(text);
-    const rootNode = tree.rootNode;
-
-    // Enhanced error detection
-    if (rootNode.hasError) {
-      const errorNodes = findErrorNodes(rootNode);
-
-      for (const errorNode of errorNodes) {
-        const range = nodeToRange(errorNode);
-        const diagnostic = createDiagnosticForError(errorNode, range);
-        diagnostics.push(diagnostic);
-      }
-    }
-
-    // Additional validations
-    validatePatternMatching(rootNode, diagnostics);
-    validateTypeConsistency(rootNode, diagnostics, text);
-    validateWhereClauseStructure(rootNode, diagnostics);
-    validateRecordSyntax(rootNode, diagnostics);
-    validateListSyntax(rootNode, diagnostics);
-    validateFunctionSyntax(rootNode, diagnostics);
+    tree = parse(text);
   } catch (err) {
     console.error("Error parsing ScrapScript:", err);
-    diagnostics.push({
+    return limitDiagnostics([{
       severity: DiagnosticSeverity.Error,
       range: Range.create(0, 0, 0, 0),
       message: `Failed to parse ScrapScript: ${err}`,
       source: "scrapscript",
-    });
+    }], maxNumberOfProblems);
   }
 
-  return diagnostics.slice(0, maxNumberOfProblems);
+  const rootNode: SyntaxNode = tree.rootNode;
+
+  // Enhanced error detection
+  const errors: Diagnostic[] = rootNode.hasError ?
+    findErrorNodes(rootNode).map(errorNode => {
+      const range = nodeToRange(errorNode);
+      return createDiagnosticForError(errorNode, range);
+    }) : [];
+
+  // Additional validations
+  const validations: Diagnostic[] = [
+    validatePatternMatching(rootNode),
+    validateTypeConsistency(rootNode, text),
+    validateWhereClauseStructure(rootNode),
+    validateRecordSyntax(rootNode),
+    validateListSyntax(rootNode),
+    validateFunctionSyntax(rootNode)
+  ].flat();
+
+  const diagnostics: Diagnostic[] = errors.concat(validations);
+  return limitDiagnostics(diagnostics, maxNumberOfProblems);
 }
 
 function findErrorNodes(node: SyntaxNode): SyntaxNode[] {
@@ -379,11 +418,9 @@ function createDiagnosticForError(
   };
 }
 
-function validatePatternMatching(
-  node: SyntaxNode,
-  diagnostics: Diagnostic[],
-): void {
-  walkTree(node, (currentNode) => {
+function validatePatternMatching(node: SyntaxNode): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    const diagnostics: Diagnostic[] = [];
     if (
       currentNode.type === "match_fun" ||
       currentNode.type === "pattern_match"
@@ -419,15 +456,17 @@ function validatePatternMatching(
         });
       }
     }
+    return diagnostics;
   });
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 function validateTypeConsistency(
   node: SyntaxNode,
-  diagnostics: Diagnostic[],
   text: string,
-): void {
-  walkTree(node, (currentNode) => {
+): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    const diagnostics: Diagnostic[] = [];
     if (currentNode.type === "list") {
       const elementTypes = new Set<string>();
 
@@ -450,8 +489,10 @@ function validateTypeConsistency(
         });
       }
     }
+    return diagnostics;
   });
 }
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 function inferBasicType(node: SyntaxNode): string | null {
   switch (node.type) {
@@ -477,45 +518,40 @@ function inferBasicType(node: SyntaxNode): string | null {
   }
 }
 
-function validateWhereClauseStructure(
-  node: SyntaxNode,
-  diagnostics: Diagnostic[],
-): void {
-  walkTree(node, (currentNode) => {
-    if (currentNode.type === "where") {
-      // Check for proper "; identifier = expression" structure
-      let hasProperStructure = false;
+function validateWhereClauseStructure(node: SyntaxNode): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    // Lazily compute diagnostics
+    const getDiagnostics = () => {
+      return [{
+        severity: DiagnosticSeverity.Error,
+        range: nodeToRange(currentNode),
+        message: 'Invalid where clause.\n'
+          + 'Expected:\n'
+          + '\t"; pattern = expression"\n'
+          + '\tor\n'
+          + '\t"; id = data_type"',
+        source: "scrapscript",
+      }];
+    };
 
-      for (let i = 0; i < currentNode.childCount; i++) {
-        const child = currentNode.child(i);
-        if (child?.type === ";" && i + 2 < currentNode.childCount) {
-          const nextChild = currentNode.child(i + 1);
-          const followingChild = currentNode.child(i + 2);
-
-          if (nextChild?.type === "id" && followingChild?.type === "=") {
-            hasProperStructure = true;
-            break;
-          }
-        }
-      }
-
-      if (!hasProperStructure) {
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: nodeToRange(currentNode),
-          message: 'Invalid where clause. Expected "; identifier = expression"',
-          source: "scrapscript",
-        });
-      }
-    }
+    if (currentNode.type !== "where") return [];
+    // Node should have form "id; ((id = data_type)|(pattern = expression))"
+    if (currentNode.childCount !== 3) return getDiagnostics();
+    // Expect semicolon in middle
+    const semicolonPosition = 1;
+    if (currentNode.child(semicolonPosition)?.type !== ";") return getDiagnostics();
+    // Expect declaration or type declaration at the end
+    const declarationPosition = 2;
+    if (currentNode.child(declarationPosition)?.type !== "declaration" &&
+      currentNode.child(declarationPosition)?.type !== "type_declaration")
+      return getDiagnostics();
+    return [];
   });
 }
 
-function validateRecordSyntax(
-  node: SyntaxNode,
-  diagnostics: Diagnostic[],
-): void {
-  walkTree(node, (currentNode) => {
+function validateRecordSyntax(node: SyntaxNode): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    const diagnostics: Diagnostic[] = [];
     if (currentNode.type === "record") {
       // Validate record field syntax
       for (let i = 0; i < currentNode.namedChildCount; i++) {
@@ -534,11 +570,13 @@ function validateRecordSyntax(
         }
       }
     }
+    return diagnostics;
   });
 }
 
-function validateListSyntax(node: SyntaxNode, diagnostics: Diagnostic[]): void {
-  walkTree(node, (currentNode) => {
+function validateListSyntax(node: SyntaxNode): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    const diagnostics: Diagnostic[] = [];
     if (currentNode.type === "list") {
       // Check for trailing commas and proper separators
       const text = currentNode.text;
@@ -552,14 +590,13 @@ function validateListSyntax(node: SyntaxNode, diagnostics: Diagnostic[]): void {
         });
       }
     }
+    return diagnostics;
   });
 }
 
-function validateFunctionSyntax(
-  node: SyntaxNode,
-  diagnostics: Diagnostic[],
-): void {
-  walkTree(node, (currentNode) => {
+function validateFunctionSyntax(node: SyntaxNode): Diagnostic[] {
+  return validateNodeBy(node, (currentNode) => {
+    const diagnostics: Diagnostic[] = [];
     if (currentNode.type === "fun") {
       // Check for proper arrow function syntax
       const hasArrow = currentNode.text.includes("->");
@@ -573,6 +610,7 @@ function validateFunctionSyntax(
         });
       }
     }
+    return diagnostics;
   });
 }
 
@@ -645,17 +683,18 @@ function analyzeCompletionContext(
     return { type: "tag" };
   }
 
-  // Check for where clause context
-  if (lineText.trim().startsWith(";") || findParentOfType(node, "where")) {
-    return { type: "where_clause" };
-  }
-
   // Check for pattern match context
   if (
     lineText.trim().startsWith("|") ||
-    findParentOfType(node, "pattern_match")
+    findParentOfType(node, "match_fun")
   ) {
     return { type: "pattern_match" };
+  }
+
+  // [TODO]: Just make the conditional a conjunction?
+  // Check for where clause context
+  if (lineText.trim().startsWith(";") || findParentOfType(node, "where")) {
+    return { type: "where_clause" };
   }
 
   // Check for record field access
@@ -719,23 +758,17 @@ function getTagCompletions(): CompletionItem[] {
 }
 
 function getWhereClauseCompletions(): CompletionItem[] {
-  const completions: CompletionItem[] = [];
-
-  completions.push({
+  return [{
     label: ". identifier = expression",
     kind: CompletionItemKind.Snippet,
     detail: "Where clause",
     documentation: "Define a variable in a where clause",
     insertText: ". ${1:identifier} = ${2:expression}",
     insertTextFormat: InsertTextFormat.Snippet,
-  });
-
-  return [...completions, ...getGlobalCompletions()];
+  }, ...getGlobalCompletions()];
 }
 
 function getPatternMatchCompletions(): CompletionItem[] {
-  const completions: CompletionItem[] = [];
-
   const patterns = [
     { label: "basic pattern", insertText: "| ${1:pattern} -> ${2:expression}" },
     { label: "catch-all", insertText: "| _ -> ${1:default}" },
@@ -764,8 +797,8 @@ function getPatternMatchCompletions(): CompletionItem[] {
     { label: "text pattern", insertText: '| "${1:text}" -> ${2:expression}' },
   ];
 
-  patterns.forEach((pattern, index) => {
-    completions.push({
+  return patterns.map((pattern, index) => {
+    return {
       label: pattern.label,
       kind: CompletionItemKind.Snippet,
       detail: "Pattern match case",
@@ -773,12 +806,11 @@ function getPatternMatchCompletions(): CompletionItem[] {
       insertText: pattern.insertText,
       insertTextFormat: InsertTextFormat.Snippet,
       sortText: `0${index.toString().padStart(2, "0")}`,
-    });
+    }
   });
-
-  return completions;
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 function getRecordFieldCompletions(recordType?: string): CompletionItem[] {
   // In a real implementation, this would analyze the record type
   const commonFields = [
@@ -799,10 +831,13 @@ function getRecordFieldCompletions(recordType?: string): CompletionItem[] {
     documentation: `Access field: ${field}`,
   }));
 }
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 function getFunctionCompletions(): CompletionItem[] {
   return BUILT_IN_FUNCTIONS.map((func) => {
+    /* eslint-disable @typescript-eslint/no-unused-vars */
     const [module, name] = func.split("/");
+    /* eslint-enable @typescript-eslint/no-unused-vars */
     return {
       label: func,
       kind: CompletionItemKind.Function,
@@ -854,10 +889,8 @@ function getTypeCompletions(): CompletionItem[] {
 }
 
 function getPipelineCompletions(): CompletionItem[] {
-  const completions: CompletionItem[] = [];
-
-  // Add common pipeline operators
-  completions.push(
+  return [
+    // Add common pipeline operators
     {
       label: "|>",
       kind: CompletionItemKind.Operator,
@@ -878,9 +911,8 @@ function getPipelineCompletions(): CompletionItem[] {
       detail: "Function composition",
       documentation: "Compose functions (left to right)",
     },
-  );
-
-  return [...completions, ...getFunctionCompletions()];
+    ...getFunctionCompletions()
+  ];
 }
 
 function getImportCompletions(): CompletionItem[] {
@@ -1164,17 +1196,13 @@ export function getDocumentSymbols(document: TextDocument): DocumentSymbol[] {
     ...declarations,
     ...whereClausesDeclarations,
     ...typeDeclarations,
-  ].map((node) => createDocumentSymbol(node, document));
+  ].map((node) => extractDocumentSymbolFromDeclaration(node, document));
 }
 
 function findNodesOfType(rootNode: SyntaxNode, type: string): SyntaxNode[] {
-  const nodes: SyntaxNode[] = [];
-  walkTree(rootNode, (node) => {
-    if (node.type === type) {
-      nodes.push(node);
-    }
+  return walkTreeFlatMapping(rootNode, (node) => {
+    return (node.type === type) ? [node] : [];
   });
-  return nodes;
 }
 
 function findWhereClauseDeclarations(rootNode: SyntaxNode): SyntaxNode[] {
@@ -1197,12 +1225,16 @@ function findWhereClauseDeclarations(rootNode: SyntaxNode): SyntaxNode[] {
   return declarations;
 }
 
-function createDocumentSymbol(
+function extractDocumentSymbolFromDeclaration(
   node: SyntaxNode,
   document: TextDocument,
 ): DocumentSymbol {
-  const patternNode = node.child(0);
-  if (!patternNode) {
+  let bindingNode: SyntaxNode | null | undefined = node.child(0);
+
+  // For normal declarations, the id is nested inside a pattern
+  if (node.type === "declaration") bindingNode = bindingNode?.child(0);
+
+  if (!bindingNode) {
     return {
       name: "unknown",
       kind: SymbolKind.Variable,
@@ -1213,7 +1245,7 @@ function createDocumentSymbol(
     };
   }
 
-  const name = getSymbolName(patternNode, document);
+  const name = getSymbolName(bindingNode, document);
   const exprNode = node.namedChild(node.namedChildCount - 1);
   const kind = getSymbolKind(exprNode);
   const detail = getSymbolDetail(node, exprNode);
@@ -1222,7 +1254,7 @@ function createDocumentSymbol(
     name,
     kind,
     range: nodeToRange(node),
-    selectionRange: nodeToRange(patternNode),
+    selectionRange: nodeToRange(bindingNode),
     detail,
     children: [],
   };
@@ -1323,22 +1355,23 @@ export function findReferences(
   if (!node || node.type !== "id") return [];
 
   const identifier = getNodeText(document, node);
-  const references: Location[] = [];
+
+  // [TODO]: Exclude false positives, i.e. occurrences
+  // of the name that are bound by different lambdas
+  // using the same identifier for their parameter
 
   // Find all occurrences of this identifier
-  walkTree(tree.rootNode, (currentNode) => {
+  return walkTreeFlatMapping(tree.rootNode, (currentNode) => {
     if (
       currentNode.type === "id" &&
       getNodeText(document, currentNode) === identifier
     ) {
-      references.push({
+      return [{
         uri: document.uri,
         range: nodeToRange(currentNode),
-      });
-    }
+      }];
+    } else return [];
   });
-
-  return references;
 }
 
 export function prepareRename(
@@ -1505,7 +1538,7 @@ function analyzeSemanticTokens(
   walkTree(node, (currentNode) => {
     // Map ScrapScript syntax to semantic token types
     switch (currentNode.type) {
-      case "id":
+      case "id": {
         const text = getNodeText(document, currentNode);
         let tokenType = 6; // variable
         if (BUILT_IN_FUNCTIONS.includes(text)) {
@@ -1521,7 +1554,8 @@ function analyzeSemanticTokens(
           0,
         );
         break;
-      case "op":
+      }
+      case "op": {
         builder.push(
           currentNode.startPosition.row,
           currentNode.startPosition.column,
@@ -1530,7 +1564,8 @@ function analyzeSemanticTokens(
           0,
         );
         break;
-      case "tag":
+      }
+      case "tag": {
         builder.push(
           currentNode.startPosition.row,
           currentNode.startPosition.column,
@@ -1539,7 +1574,8 @@ function analyzeSemanticTokens(
           0,
         );
         break;
-      case "number":
+      }
+      case "number": {
         builder.push(
           currentNode.startPosition.row,
           currentNode.startPosition.column,
@@ -1548,7 +1584,8 @@ function analyzeSemanticTokens(
           0,
         );
         break;
-      case "text":
+      }
+      case "text": {
         builder.push(
           currentNode.startPosition.row,
           currentNode.startPosition.column,
@@ -1557,6 +1594,7 @@ function analyzeSemanticTokens(
           0,
         );
         break;
+      }
     }
   });
 }
@@ -1571,7 +1609,9 @@ export function setupServer() {
 
   let hasConfigurationCapability = false;
   let hasWorkspaceFolderCapability = false;
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   let hasDiagnosticRelatedInformationCapability = false;
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   connection.onInitialize(async (params: InitializeParams) => {
     const capabilities = params.capabilities;
@@ -1641,9 +1681,11 @@ export function setupServer() {
       );
     }
     if (hasWorkspaceFolderCapability) {
+      /* eslint-disable @typescript-eslint/no-unused-vars */
       connection.workspace.onDidChangeWorkspaceFolders((_event) => {
         connection.console.log("Workspace folder change event received.");
       });
+      /* eslint-enable @typescript-eslint/no-unused-vars */
     }
   });
 
